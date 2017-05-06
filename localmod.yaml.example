@@ -1,0 +1,12 @@
+serve:
+  host: 127.0.0.1
+  port: 8765
+
+auth:
+  username: localmod
+  password: 123
+
+mods:
+  - prefix: RED VELVET Devotional
+    comment: RVOP
+    token: 123
