@@ -51,11 +51,14 @@ func auth(w http.ResponseWriter, r *http.Request) (mod common.Mod, authed bool) 
 }
 
 func ensurePrefix(w http.ResponseWriter, mod common.Mod, post client.Post) bool {
-	if !strings.HasPrefix(strings.TrimSpace(post.Message), mod.Prefix) {
-		sendError(w, http.StatusForbidden, errors.New("bad OP prefix"), "")
-		return false
+	msg := strings.TrimSpace(post.Message)
+	idx := strings.Index(msg, mod.Prefix)
+	nl := strings.Index(msg, "\n")
+	if idx >= 0 && (nl < 0 || idx < nl) {
+		return true
 	}
-	return true
+	sendError(w, http.StatusForbidden, errors.New("bad OP prefix"), "")
+	return false
 }
 
 func managePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params, del bool) {
