@@ -116,6 +116,9 @@ func Serve(cfg common.Config) {
 	common.HandleError(err)
 
 	for _, mod := range cfg.Mods {
+		if mod.Token == "" || mod.Prefix == "" {
+			log.Fatalln("Empty mod entry")
+		}
 		modByToken[mod.Token] = mod
 	}
 

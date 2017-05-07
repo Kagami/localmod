@@ -1,4 +1,4 @@
-all: clean build serve
+all: build serve
 
 config:
 	cp localmod.yaml.example localmod.yaml
@@ -6,7 +6,7 @@ config:
 serve:
 	./localmod -config localmod.yaml serve
 
-build:
+build: clean
 	go build -ldflags="-s -w"
 
 clean:
