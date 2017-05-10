@@ -6,7 +6,7 @@
 // @updateURL   https://raw.githubusercontent.com/Kagami/localmod/master/localmod.user.js
 // @include     https://0chan.hk/*
 // @include     http://nullchan7msxi257.onion/*
-// @version     0.0.1
+// @version     0.0.2
 // @grant       none
 // ==/UserScript==
 
@@ -16,12 +16,10 @@ var LM_BACKEND_URL = localStorage.getItem("LM_BACKEND_URL") ||
 function mod(op, arg) {
   return new Promise(function(resolve, reject) {
     var xhr = new XMLHttpRequest();
-    var method = op === "restorePost" ? "POST" : "DELETE";
-    var url = "/api/post/" + arg;
-    if (op === "restorePost") {
-      url += "/restore";
-    }
-    xhr.open(method, LM_BACKEND_URL + url, true);
+    var url = "/api/post/" + (op === "restorePost" ? "restore" : "delete");
+    var data = JSON.stringify({id: arg});
+    xhr.open("POST", LM_BACKEND_URL + url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("X-Token", getToken());
     xhr.onload = function() {
       if (this.status >= 200 && this.status < 400) {
@@ -38,7 +36,7 @@ function mod(op, arg) {
     xhr.onerror = function() {
       reject(new Error("network error"));
     };
-    xhr.send();
+    xhr.send(data);
   });
 }
 

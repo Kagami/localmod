@@ -22,16 +22,14 @@ type lmError struct {
 	Error string `json:"error"`
 }
 
-func sendError(w http.ResponseWriter, status int, err error, msg string) bool {
+type postForm struct {
+	Id string
+}
+
+func sendError(w http.ResponseWriter, status int, err error) bool {
 	if err != nil {
 		w.WriteHeader(status)
-		var finalErr string
-		if msg == "" {
-			finalErr = fmt.Sprint(err)
-		} else {
-			finalErr = msg
-		}
-		lmErr := lmError{finalErr}
+		lmErr := lmError{fmt.Sprint(err)}
 		data, _ := json.Marshal(lmErr)
 		w.Write(data)
 		return true
@@ -46,7 +44,7 @@ func auth(w http.ResponseWriter, r *http.Request) (mod common.Mod, authed bool) 
 			return mod, true
 		}
 	}
-	sendError(w, http.StatusForbidden, errors.New("unknown token"), "")
+	sendError(w, http.StatusForbidden, errors.New("unknown token"))
 	return mod, false
 }
 
@@ -57,7 +55,7 @@ func ensurePrefix(w http.ResponseWriter, mod common.Mod, post client.Post) bool 
 	if idx >= 0 && (nl < 0 || idx < nl) {
 		return true
 	}
-	sendError(w, http.StatusForbidden, errors.New("bad OP prefix"), "")
+	sendError(w, http.StatusForbidden, errors.New("bad OP prefix"))
 	return false
 }
 
@@ -69,27 +67,34 @@ func managePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params, de
 		return
 	}
 
-	postId := ps.ByName("post")
-	_, err := strconv.Atoi(postId)
-	if sendError(w, http.StatusBadRequest, err, "bad post id") {
+	var f postForm
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&f)
+	if err != nil {
+		sendError(w, http.StatusBadRequest, errors.New("bad form"))
+		return
+	}
+	numId, err := strconv.Atoi(f.Id)
+	if err != nil || numId < 1 {
+		sendError(w, http.StatusBadRequest, errors.New("bad form"))
 		return
 	}
 
-	post, err := client.GetPost(session, postId)
-	if sendError(w, http.StatusInternalServerError, err, "") {
+	post, err := client.GetPost(session, f.Id)
+	if sendError(w, http.StatusInternalServerError, err) {
 		return
 	}
 	if (del && post.IsDeleted) || (!del && !post.IsDeleted) || post.IsOpPost {
-		sendError(w, http.StatusBadRequest, errors.New("bad post"), "")
+		sendError(w, http.StatusBadRequest, errors.New("bad post"))
 		return
 	}
 
 	opPost, err := client.GetPost(session, post.OpPostId)
-	if sendError(w, http.StatusInternalServerError, err, "") {
+	if sendError(w, http.StatusInternalServerError, err) {
 		return
 	}
 	if opPost.IsDeleted {
-		sendError(w, http.StatusBadRequest, errors.New("bad thread"), "")
+		sendError(w, http.StatusBadRequest, errors.New("bad thread"))
 		return
 	}
 
@@ -98,11 +103,11 @@ func managePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params, de
 	}
 
 	if del {
-		err = client.DeletePost(session, postId)
+		err = client.DeletePost(session, f.Id)
 	} else {
-		err = client.RestorePost(session, postId)
+		err = client.RestorePost(session, f.Id)
 	}
-	sendError(w, http.StatusInternalServerError, err, "")
+	sendError(w, http.StatusInternalServerError, err)
 }
 
 func deletePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -128,8 +133,8 @@ func Serve(cfg common.Config) {
 	// TODO(Kagami): Delete/restore thread.
 	// TODO(Kagami): Set/unset NSFW.
 	router := httprouter.New()
-	router.DELETE("/api/post/:post", deletePost)
-	router.POST("/api/post/:post/restore", restorePost)
+	router.POST("/api/post/delete", deletePost)
+	router.POST("/api/post/restore", restorePost)
 	addr := cfg.Serve.Host + ":" + strconv.Itoa(cfg.Serve.Port)
 
 	log.Printf("Listening on %v", addr)

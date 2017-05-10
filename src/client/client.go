@@ -25,7 +25,6 @@ type postOuter struct {
 }
 
 type Post struct {
-	ThreadId  string
 	OpPostId  string
 	IsOpPost  bool
 	IsDeleted bool
@@ -41,6 +40,7 @@ func Auth(username string, password string) (session string, err error) {
 		return "", errors.New("cannot login")
 	}
 	defer resp.Body.Close()
+	// TODO(Kagami): Use json.Decoder.
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.New("cannot read response")
